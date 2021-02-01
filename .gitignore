@@ -1,0 +1,3 @@
+build/*
+MiddleWares/Third_Party/libscpi/dist/*
+MiddleWares/Third_Party/libscpi/obj/*
