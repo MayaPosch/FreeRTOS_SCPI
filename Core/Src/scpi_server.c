@@ -49,7 +49,7 @@
 #include "task.h"
 #include "lwip/tcp.h"
 #include "lwip/inet.h"
-#include "httpserver-netconn.h"
+#include "lwip/api.h"
 
 
 #define DEVICE_PORT 5025
