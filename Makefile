@@ -151,7 +151,7 @@ Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c \
 Middlewares/Third_Party/LwIP/system/OS/sys_arch.c \
 Middlewares/Third_Party/LwIP/src/apps/http/fs.c \
 Middlewares/Third_Party/LwIP/src/apps/http/httpd.c \
-Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
+Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_useNewlib_ST.c \
 Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c \
 Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c \
 Middlewares/Third_Party/FreeRTOS/Source/queue.c \
@@ -277,7 +277,7 @@ LDSCRIPT = STM32F746ZGTx_FLASH.ld
 # libraries
 LIBS = -lc -lm -lnosys -lscpi
 LIBDIR = -LMiddlewares\Third_Party\libscpi\dist
-LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections  -Wl,--print-memory-usage
 
 # default action: build all
 all: libscpi $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
