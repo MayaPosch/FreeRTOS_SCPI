@@ -103,7 +103,7 @@ int main(void) {
 	BSP_LED_Init(LED3);
 
 	// Init UART for debug output on ST-Link VCP.
-	//UART3_config();
+	UART3_config();
   
 	char buf[] = "UART OK\n";
 	HAL_UART_Transmit(&UartHandle, (uint8_t *)buf, 8, HAL_MAX_DELAY);
@@ -344,6 +344,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 	// Peripheral clock enable
 	__HAL_RCC_USART3_CLK_ENABLE();
 
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+
 	/**USART3 GPIO Configuration    
 	PD8     ------> USART3_TX
 	PD9     ------> USART3_RX 
@@ -417,23 +419,26 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *huart) {
 #include <stdint.h>
 
 static void UART3_config(void) {
+	HAL_UART_MspInit(&UartHandle);
+	
 	/* Put the USART peripheral in the Asynchronous mode (UART Mode) */
 	/* UART configured as follows:
 	  - Word Length = 8 Bits (7 data bit + 1 parity bit) : 
 					  BE CAREFUL : Program 7 data bits + 1 parity bit in PC HyperTerminal
 	  - Stop Bit    = One Stop bit
 	  - Parity      = ODD parity
-	  - BaudRate    = 9600 baud
+	  - BaudRate    = 115200 baud
 	  - Hardware flow control disabled (RTS and CTS signals) */
 	UartHandle.Instance        = USART3;
-
-	UartHandle.Init.BaudRate   = 9600;
+	UartHandle.Init.BaudRate   = 115200;
 	UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
 	UartHandle.Init.StopBits   = UART_STOPBITS_1;
-	UartHandle.Init.Parity     = UART_PARITY_ODD;
-	UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
+	UartHandle.Init.Parity     = UART_PARITY_NONE;
 	UartHandle.Init.Mode       = UART_MODE_TX_RX;
+	UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
 	UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+	UartHandle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+	UartHandle.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 	if (HAL_UART_Init(&UartHandle) != HAL_OK) {
 		/* Initialization Error */
 		Error_Handler();
@@ -470,13 +475,13 @@ int sendUart(char ch) {
 
 int _write(int handle, char* ch, int size) {
 	// FIXME: both the HAL and bare-metal version give the same result here. Check clocks?
-	//HAL_UART_Transmit(&UartHandle, (uint8_t *) ch, size, 0xFFFF);
+	HAL_UART_Transmit(&UartHandle, (uint8_t *) ch, size, 0xFFFF);
 	
-	int count = size;
+	/* int count = size;
 	while (count-- > 0) {
 		sendUart(*ch);
 		ch++;
-	}
+	} */
 
 	return size;
 }

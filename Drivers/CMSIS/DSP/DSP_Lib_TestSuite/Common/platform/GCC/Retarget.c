@@ -74,7 +74,7 @@ int _read (int fd, char * ptr, int len)
   return (len - i);
 }
 
-int _write (int fd, char * ptr, int len) 
+__attribute__((weak)) int _write (int fd, char * ptr, int len) 
 {
   int i;
 
