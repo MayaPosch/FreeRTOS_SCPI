@@ -270,17 +270,18 @@ static void http_server_netconn_thread(void *arg)
       /* Put the connection into LISTEN state */
       netconn_listen(conn);
   
-      while(1) 
-      {
+      while(1) {
         /* accept any icoming connection */
         accept_err = netconn_accept(conn, &newconn);
-        if(accept_err == ERR_OK)
-        {
-          /* serve connection */
-          http_server_serve(newconn);
+		printf("New HTTP connection...\n");
+        if(accept_err == ERR_OK) {
+			printf("Serving HTTP...\n");
+			
+			/* serve connection */
+			http_server_serve(newconn);
 
-          /* delete connection */
-          netconn_delete(newconn);
+			/* delete connection */
+			netconn_delete(newconn);
         }
       }
     }
@@ -294,7 +295,7 @@ static void http_server_netconn_thread(void *arg)
   */
 void http_server_netconn_init()
 {
-  sys_thread_new("HTTP", http_server_netconn_thread, NULL, DEFAULT_THREAD_STACKSIZE, WEBSERVER_THREAD_PRIO);
+  sys_thread_new("HTTP", http_server_netconn_thread, NULL, DEFAULT_THREAD_STACKSIZE * 2, WEBSERVER_THREAD_PRIO);
 }
 
 /**
