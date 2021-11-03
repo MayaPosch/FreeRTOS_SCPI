@@ -46,6 +46,15 @@
 #ifndef __LWIPOPTS_H__
 #define __LWIPOPTS_H__
 
+
+#define LWIP_DEBUG 1
+
+
+// Fixes the 'only one TCP connection' limit in LwIP-Netconn.
+#define MEMP_NUM_NETCONN                8
+//#define MEMP_NUM_NETBUF                 4
+
+
 /**
  * NO_SYS==1: Provides VERY minimal functionality. Otherwise,
  * use lwIP facilities.
