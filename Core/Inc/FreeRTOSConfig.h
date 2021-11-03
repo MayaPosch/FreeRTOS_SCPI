@@ -90,18 +90,22 @@
 #endif
 
 
+#define configUSE_NEWLIB_REENTRANT 1
+
+
 #define configUSE_PREEMPTION			1
 #define configUSE_IDLE_HOOK			0
 #define configUSE_TICK_HOOK			0
 #define configCPU_CLOCK_HZ			( SystemCoreClock )
 #define configTICK_RATE_HZ			( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES			(  7 )
-#define configMINIMAL_STACK_SIZE		( ( uint16_t ) 128 )
-#if defined(__GNUC__)
+#define configMINIMAL_STACK_SIZE		( ( uint16_t ) 512 )
+#define configTOTAL_HEAP_SIZE                    ((size_t)32768)
+/* #if defined(__GNUC__)
  #define configTOTAL_HEAP_SIZE			( ( size_t ) ( 25 * 1024 ) )
 #else
  #define configTOTAL_HEAP_SIZE			( ( size_t ) ( 20 * 1024 ) )
-#endif
+#endif */
 #define configMAX_TASK_NAME_LEN			( 16 )
 #define configUSE_TRACE_FACILITY		1
 #define configUSE_16_BIT_TICKS			0

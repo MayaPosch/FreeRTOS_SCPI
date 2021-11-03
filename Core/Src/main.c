@@ -55,12 +55,14 @@
 #include "app_ethernet.h"
 #include "httpserver-netconn.h"
 #include "scpi_server.h"
+#include "stdio.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 struct netif gnetif; /* network interface structure */
+UART_HandleTypeDef UartHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
@@ -68,6 +70,7 @@ static void StartThread(void const * argument);
 static void Netif_Config(void);
 static void Error_Handler(void);
 static void MPU_Config(void);
+static void UART3_config(void);
 static void CPU_CACHE_Enable(void);
 
 /* Private functions ---------------------------------------------------------*/
@@ -77,43 +80,51 @@ static void CPU_CACHE_Enable(void);
   * @param  None
   * @retval None
   */
-int main(void)
-{
-  /* Configure the MPU attributes as Device memory for ETH DMA descriptors */
-  MPU_Config();
+int main(void) {
+	/* Configure the MPU attributes as Device memory for ETH DMA descriptors */
+	MPU_Config();
+
+	/* Enable the CPU Cache */
+	CPU_CACHE_Enable();
+
+	/* STM32F7xx HAL library initialization:
+	   - Configure the Flash ART accelerator on ITCM interface
+	   - Configure the Systick to generate an interrupt each 1 msec
+	   - Set NVIC Group Priority to 4
+	   - Global MSP (MCU Support Package) initialization
+	 */
+	HAL_Init();  
+
+	/* Configure the system clock to 216 MHz */
+	SystemClock_Config(); 
+
+	/*configure LED1 and LED3 */
+	BSP_LED_Init(LED1);
+	BSP_LED_Init(LED3);
+
+	// Init UART for debug output on ST-Link VCP.
+	//UART3_config();
   
-  /* Enable the CPU Cache */
-  CPU_CACHE_Enable();
-
-  /* STM32F7xx HAL library initialization:
-       - Configure the Flash ART accelerator on ITCM interface
-       - Configure the Systick to generate an interrupt each 1 msec
-       - Set NVIC Group Priority to 4
-       - Global MSP (MCU Support Package) initialization
-     */
-  HAL_Init();  
+	char buf[] = "UART OK\n";
+	HAL_UART_Transmit(&UartHandle, (uint8_t *)buf, 8, HAL_MAX_DELAY);
   
-  /* Configure the system clock to 216 MHz */
-  SystemClock_Config(); 
+	// 
+	MPU_Config();
 
-  /*configure LED1 and LED3 */
-  BSP_LED_Init(LED1);
-  BSP_LED_Init(LED3);
-
-  /* Init thread */
+	/* Init thread */
 #if defined(__GNUC__)
-  osThreadDef(Start, StartThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE * 5);
+	osThreadDef(Start, StartThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE * 5);
 #else
-  osThreadDef(Start, StartThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE * 2);
+	osThreadDef(Start, StartThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE * 2);
 #endif
   
-  osThreadCreate (osThread(Start), NULL);
+	osThreadCreate (osThread(Start), NULL);
   
-  /* Start scheduler */
-  osKernelStart();
+	/* Start scheduler */
+	osKernelStart();
   
-  /* We should never get here as control is now taken by the scheduler */
-  for( ;; );
+	/* We should never get here as control is now taken by the scheduler */
+	for( ;; );
 }
 
 /**
@@ -276,7 +287,7 @@ static void MPU_Config(void)
   
   /* Configure the MPU as Normal Non Cacheable for Ethernet Buffers in the SRAM2 */
   MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-  MPU_InitStruct.BaseAddress = 0x2004C000;
+  MPU_InitStruct.BaseAddress = SRAM2_BASE; //0x2004C000;
   MPU_InitStruct.Size = MPU_REGION_SIZE_16KB;
   MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
   MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
@@ -291,7 +302,7 @@ static void MPU_Config(void)
   
   /* Configure the MPU as Device for Ethernet Descriptors in the SRAM2 */
   MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-  MPU_InitStruct.BaseAddress = 0x2004C000;
+  MPU_InitStruct.BaseAddress = SRAM2_BASE; //0x2004C000;
   MPU_InitStruct.Size = MPU_REGION_SIZE_256B;
   MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
   MPU_InitStruct.IsBufferable = MPU_ACCESS_BUFFERABLE;
@@ -307,6 +318,171 @@ static void MPU_Config(void)
   /* Enable the MPU */
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
+
+// --- UART START ---
+#define USARTx                           USART3
+#define USARTx_CLK_ENABLE()              __HAL_RCC_USART3_CLK_ENABLE();
+#define USARTx_RX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOD_CLK_ENABLE()
+#define USARTx_TX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOD_CLK_ENABLE()
+
+#define USARTx_FORCE_RESET()             __HAL_RCC_USART3_FORCE_RESET()
+#define USARTx_RELEASE_RESET()           __HAL_RCC_USART3_RELEASE_RESET()
+
+#define USARTx_TX_PIN                    GPIO_PIN_8
+#define USARTx_TX_GPIO_PORT              GPIOD
+#define USARTx_TX_AF                     GPIO_AF7_USART3
+#define USARTx_RX_PIN                    GPIO_PIN_9
+#define USARTx_RX_GPIO_PORT              GPIOD
+#define USARTx_RX_AF                     GPIO_AF7_USART3
+
+//#include <stm32f7xx_hal_rcc_ex.h>
+
+void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;
+	if(huart->Instance==USART3) {
+	// Peripheral clock enable
+	__HAL_RCC_USART3_CLK_ENABLE();
+
+	/**USART3 GPIO Configuration    
+	PD8     ------> USART3_TX
+	PD9     ------> USART3_RX 
+	*/
+	GPIO_InitStruct.Pin = USARTx_RX_PIN | USARTx_TX_PIN;
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
+	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+	}
+  /* GPIO_InitTypeDef  GPIO_InitStruct;
+
+  RCC_PeriphCLKInitTypeDef RCC_PeriphClkInit;
+
+  // 1- Enable peripherals and GPIO Clocks
+  // Enable GPIO TX/RX clock 
+  USARTx_TX_GPIO_CLK_ENABLE();
+  USARTx_RX_GPIO_CLK_ENABLE();
+
+  // Select SysClk as source of USART3 clocks 
+  RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART3;
+  RCC_PeriphClkInit.Usart1ClockSelection = RCC_USART3CLKSOURCE_SYSCLK;
+  HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphClkInit);
+
+  // Enable USARTx clock
+  USARTx_CLK_ENABLE();
+
+  // 2- Configure peripheral GPIO.
+  // UART TX GPIO pin configuration 
+  GPIO_InitStruct.Pin       = USARTx_TX_PIN;
+  GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull      = GPIO_PULLUP;
+  GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = USARTx_TX_AF;
+
+  HAL_GPIO_Init(USARTx_TX_GPIO_PORT, &GPIO_InitStruct);
+
+  // UART RX GPIO pin configuration 
+  GPIO_InitStruct.Pin = USARTx_RX_PIN;
+  GPIO_InitStruct.Alternate = USARTx_RX_AF;
+
+  HAL_GPIO_Init(USARTx_RX_GPIO_PORT, &GPIO_InitStruct); */
+}
+
+
+void HAL_UART_MspDeInit(UART_HandleTypeDef *huart) {
+	if (huart->Instance==USART3) {
+		// Peripheral clock disable
+		__HAL_RCC_USART3_CLK_DISABLE();
+	  
+		/**USART3 GPIO Configuration    
+		PD8     ------> USART3_TX
+		PD9     ------> USART3_RX 
+		*/
+		HAL_GPIO_DeInit(GPIOD, USARTx_RX_PIN | USARTx_TX_PIN);
+	}
+	
+  /*##-1- Reset peripherals ##################################################*/
+  //USARTx_FORCE_RESET();
+  //USARTx_RELEASE_RESET();
+
+  /*##-2- Disable peripherals and GPIO Clocks #################################*/
+  /* Configure UART Tx as alternate function  */
+  //HAL_GPIO_DeInit(USARTx_TX_GPIO_PORT, USARTx_TX_PIN);
+  /* Configure UART Rx as alternate function  */
+  //HAL_GPIO_DeInit(USARTx_RX_GPIO_PORT, USARTx_RX_PIN);
+}
+
+
+#include <stdint.h>
+
+static void UART3_config(void) {
+	/* Put the USART peripheral in the Asynchronous mode (UART Mode) */
+	/* UART configured as follows:
+	  - Word Length = 8 Bits (7 data bit + 1 parity bit) : 
+					  BE CAREFUL : Program 7 data bits + 1 parity bit in PC HyperTerminal
+	  - Stop Bit    = One Stop bit
+	  - Parity      = ODD parity
+	  - BaudRate    = 9600 baud
+	  - Hardware flow control disabled (RTS and CTS signals) */
+	UartHandle.Instance        = USART3;
+
+	UartHandle.Init.BaudRate   = 9600;
+	UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
+	UartHandle.Init.StopBits   = UART_STOPBITS_1;
+	UartHandle.Init.Parity     = UART_PARITY_ODD;
+	UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
+	UartHandle.Init.Mode       = UART_MODE_TX_RX;
+	UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&UartHandle) != HAL_OK) {
+		/* Initialization Error */
+		Error_Handler();
+	}
+	
+	
+	
+	// Debug
+	/* USART3->CR1 &= ~(USART_CR1_RE | USART_CR1_TE | USART_CR1_UE); // | USART_CR1_RXNEIE);
+	
+	int sysclk = (216 * 1000 * 1000) / 4; // 216 MHz / 4 = APB1 clock.
+	//uint16_t uartdiv = SystemCoreClock / 9600;
+	uint16_t uartdiv = sysclk / 9600;
+	USART3->BRR = (((uartdiv / 16) << USART_BRR_DIV_MANTISSA_Pos) |
+							((uartdiv % 16) << USART_BRR_DIV_FRACTION_Pos));
+							
+	USART3->CR1 |= (USART_CR1_RE | USART_CR1_TE | USART_CR1_UE); // | USART_CR1_RXNEIE);  */
+
+	/* Output a message using printf function */
+	printf("\n\r UART Printf Example: retarget the C library printf function to the UART\n\r");
+	printf("** Test finished successfully. ** \n\r");
+}
+
+
+// --- SEND UART ---
+int sendUart(char ch) {
+	// Copy bit to the device's transmission register.
+	while (!(USART3->ISR & USART_ISR_TXE)) {};
+	USART3->TDR = (uint8_t) ch;
+	
+	return 1;
+}
+
+
+int _write(int handle, char* ch, int size) {
+	// FIXME: both the HAL and bare-metal version give the same result here. Check clocks?
+	//HAL_UART_Transmit(&UartHandle, (uint8_t *) ch, size, 0xFFFF);
+	
+	int count = size;
+	while (count-- > 0) {
+		sendUart(*ch);
+		ch++;
+	}
+
+	return size;
+}
+
+// --- UART END ---
+
 
 /**
   * @brief  CPU L1-Cache enable.
