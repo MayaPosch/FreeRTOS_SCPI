@@ -1,6 +1,6 @@
 # STM32 HAL & FreeRTOS-based HTTP & SCPI server #
 
-Simple HTTP & SCPI server based around FreeRTOS and libscpi libraries for Nucleo-F746ZG & Nucleo-F767ZI boards. Uses the LwIP Netconn API.
+Simple HTTP & SCPI server based around FreeRTOS and libscpi libraries for Nucleo-F746ZG boards. Uses the LwIP Netconn API.
 
 It contains two HTML pages:
 
@@ -21,8 +21,6 @@ This example code was adapted from the 'LwIP HTTP Server Netconn RTOS' example p
 ## Building ##
 
 This example requires Make and the [Arm GCC-based toolchain](https://developer.arm.com/tools-and-software/embedded/arm-compiler/downloads/version-6). Building the project has been successfully tested with MSYS2 on Windows.
-
-By default the Makefile targets the Nucleo-F746ZG board. Toggle the commented out defines in the Makefile to change the target.
 
 With the dependencies installed, execute `make` to build the project.
 
