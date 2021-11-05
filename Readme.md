@@ -20,7 +20,7 @@ This example code was adapted from the 'LwIP HTTP Server Netconn RTOS' example p
 
 ## Building ##
 
-This example requires Make and the [Arm GCC-based toolchain](https://developer.arm.com/tools-and-software/embedded/arm-compiler/downloads/version-6). Building the project has been successfully tested with MSYS2 on Windows.
+This example requires Make and the [Arm GCC-based toolchain](https://developer.arm.com/tools-and-software/embedded/arm-compiler/downloads/version-6) (arm-none-eabi). Building the project has been tested with MSYS2 on Windows and under Ubuntu.
 
 With the dependencies installed, execute `make` to build the project.
 
